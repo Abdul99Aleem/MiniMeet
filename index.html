@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Call with Chat</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Video Call with Chat</h1>
+        
+        <div class="setup-box">
+            <div class="controls">
+                <button id="startBtn">Start Call</button>
+                <button id="hangupBtn" disabled>End Call</button>
+                <div class="device-controls">
+                    <label>
+                        <input type="checkbox" id="videoToggle" checked>
+                        Camera
+                    </label>
+                    <label>
+                        <input type="checkbox" id="audioToggle" checked>
+                        Microphone
+                    </label>
+                </div>
+            </div>
+            <div class="room-controls">
+                <input type="text" id="roomInput" placeholder="Enter room name">
+                <button id="joinBtn">Join Room</button>
+            </div>
+        </div>
+        
+        <div class="video-container">
+            <div class="video-box">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-label">You</div>
+            </div>
+            <div class="video-box">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="video-label">Remote User</div>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Type a message...">
+                <button id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
