@@ -19,10 +19,36 @@ body {
     padding: 20px;
 }
 
-h1 {
-    text-align: center;
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
-    color: #333;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+h1 {
+    color: #4285f4;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#currentUser {
+    font-weight: bold;
+}
+
+.logout-btn {
+    background-color: #f44336;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
 }
 
 .setup-box {
