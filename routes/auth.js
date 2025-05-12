@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 const User = require('../models/User');
+const path = require('path');
 
 // Login page
 router.get('/login', (req, res) => {
@@ -11,14 +11,18 @@ router.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, '../views/login.html'));
 });
 
+// Register page
+router.get('/register', (req, res) => {
+    if (req.session.user) {
+        return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, '../views/register.html'));
+});
+
 // Login API
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        
-        if (!username || !password) {
-            return res.status(400).json({ message: 'Username and password are required' });
-        }
         
         // Find user
         const user = await User.findOne({ username });
@@ -27,12 +31,13 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
         
-        // Set user in session
+        // Set session
         req.session.user = {
             id: user._id,
             username: user.username
         };
         
+        console.log(`User ${username} logged in successfully`);
         res.json({ success: true });
     } catch (error) {
         console.error('Login error:', error);
@@ -40,16 +45,26 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Check authentication status
-router.get('/check', (req, res) => {
-    if (req.session.user) {
-        return res.json({
-            authenticated: true,
-            user: req.session.user
-        });
+// Register API
+router.post('/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        // Check if username exists
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Username already exists' });
+        }
+        
+        // Create new user
+        const user = new User({ username, password });
+        await user.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Server error' });
     }
-    
-    res.json({ authenticated: false });
 });
 
 // Logout
