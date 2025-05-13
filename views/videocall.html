@@ -90,5 +90,16 @@
           document.documentElement.style.opacity = '1';
         });
     </script>
+    <script>
+        // Initialize chat panel state based on screen size
+        document.addEventListener('DOMContentLoaded', function() {
+            const mainContent = document.querySelector('.main-content');
+            
+            // Initially hide chat panel on desktop
+            if (window.innerWidth > 768) {
+                mainContent.classList.add('chat-hidden');
+            }
+        });
+    </script>
 </body>
 </html>

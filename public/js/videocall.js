@@ -542,11 +542,40 @@ function setupUIListeners() {
         });
     
         // Toggle chat panel on mobile
-        toggleChatBtn.addEventListener('click', () => {
-            const chatPanel = document.querySelector('.chat-panel');
-            chatPanel.classList.toggle('mobile-visible');
-            toggleChatBtn.classList.toggle('active');
-        });
+toggleChatBtn.addEventListener('click', () => {
+    const mainContent = document.querySelector('.main-content');
+    const chatPanel = document.querySelector('.chat-panel');
+    
+    // Check if we're on mobile
+    if (window.innerWidth <= 768) {
+        chatPanel.classList.toggle('mobile-visible');
+        toggleChatBtn.classList.toggle('active');
+        
+        // Create or remove overlay
+        let overlay = document.querySelector('.chat-overlay');
+        if (chatPanel.classList.contains('mobile-visible')) {
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'chat-overlay';
+                document.body.appendChild(overlay);
+                
+                // Close chat when clicking overlay
+                overlay.addEventListener('click', () => {
+                    chatPanel.classList.remove('mobile-visible');
+                    toggleChatBtn.classList.remove('active');
+                    overlay.classList.remove('visible');
+                });
+            }
+            overlay.classList.add('visible');
+        } else if (overlay) {
+            overlay.classList.remove('visible');
+        }
+    } else {
+        // For desktop
+        mainContent.classList.toggle('chat-hidden');
+        toggleChatBtn.classList.toggle('active');
+    }
+});
     
         // Leave room
         leaveRoomBtn.addEventListener('click', () => {
@@ -740,4 +769,31 @@ function setupUIListeners() {
             }
         }
     });
+    // Update chat toggle behavior when window is resized
+window.addEventListener('resize', () => {
+    const mainContent = document.querySelector('.main-content');
+    const chatPanel = document.querySelector('.chat-panel');
+    const overlay = document.querySelector('.chat-overlay');
     
+    // Reset everything when switching between mobile and desktop
+    if (window.innerWidth > 768) {
+        chatPanel.classList.remove('mobile-visible');
+        if (overlay) overlay.classList.remove('visible');
+        
+        // Only toggle desktop view if the chat button is active
+        if (toggleChatBtn.classList.contains('active')) {
+            mainContent.classList.remove('chat-hidden');
+        } else {
+            mainContent.classList.add('chat-hidden');
+        }
+    } else {
+        mainContent.classList.remove('chat-hidden');
+        
+        // Only show mobile chat if the button is active
+        if (toggleChatBtn.classList.contains('active')) {
+            chatPanel.classList.add('mobile-visible');
+            if (overlay) overlay.classList.add('visible');
+        }
+    }
+});
+
