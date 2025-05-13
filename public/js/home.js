@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const joinMeetingBtn = document.getElementById('join-meeting-btn');
     const roomIdInput = document.getElementById('room-id-input');
     const userMenu = document.getElementById('user-menu');
+    const loadingIndicator = document.getElementById('loading');
     
     // Make the page visible
     document.documentElement.style.visibility = 'visible';
@@ -48,44 +49,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.random().toString(36).substring(2, 7);
     }
     
-    // Create a new meeting
-    newMeetingBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
+    // Create a new meeting - Direct implementation
+    function createNewMeeting() {
+        console.log("New meeting button clicked");
         
-        try {
-            // Check if user is authenticated first
-            const response = await fetch('/api/user');
-            
-            if (response.ok) {
-                const data = await response.json();
-                
-                if (data.user) {
-                    // User is authenticated, create a new room
-                    const roomId = generateRoomId();
-                    window.location.href = `/?room=${roomId}`;
-                } else {
-                    // User is not authenticated, redirect to login
-                    window.location.href = '/auth/login';
-                }
-            } else {
-                // Not authenticated, redirect to login
-                window.location.href = '/auth/login';
-            }
-        } catch (error) {
-            console.error('Error checking authentication:', error);
-            window.location.href = '/auth/login';
-        }
-    });
+        // Generate a room ID directly
+        const roomId = generateRoomId();
+        console.log("Generated room ID:", roomId);
+        
+        // Redirect to the room with create=true parameter
+        window.location.href = `/?room=${roomId}&create=true`;
+    }
+    
+    // Add click handler directly
+    if (newMeetingBtn) {
+        console.log("New meeting button found, adding click handler");
+        newMeetingBtn.onclick = createNewMeeting;
+    } else {
+        console.error("New meeting button not found in the DOM");
+    }
     
     // Join an existing meeting
-    joinMeetingBtn.addEventListener('click', joinMeeting);
-    roomIdInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            joinMeeting();
-        }
-    });
+    if (joinMeetingBtn) {
+        joinMeetingBtn.addEventListener('click', joinMeeting);
+    }
     
-    async function joinMeeting() {
+    if (roomIdInput) {
+        roomIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                joinMeeting();
+            }
+        });
+    }
+    
+    function joinMeeting() {
         const roomId = roomIdInput.value.trim();
         
         if (!roomId) {
@@ -93,33 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        try {
-            // Check if user is authenticated first
-            const authResponse = await fetch('/api/user');
-            
-            if (!authResponse.ok) {
-                // Not authenticated, redirect to login with the room ID
-                window.location.href = `/auth/login?redirect=/?room=${roomId}`;
-                return;
-            }
-            
-            // User is authenticated, check if the room exists
-            const roomResponse = await fetch(`/api/check-room?roomId=${roomId}`);
-            const roomData = await roomResponse.json();
-            
-            if (roomResponse.ok && roomData.exists) {
-                // Room exists, join it
-                window.location.href = `/?room=${roomId}`;
-            } else {
-                // Room doesn't exist
-                alert('No meeting found with this code');
-            }
-        } catch (error) {
-            console.error('Error joining meeting:', error);
-            alert('Error joining meeting. Please try again.');
-        }
+        // Directly join the room with join=true parameter
+        window.location.href = `/?room=${roomId}&join=true`;
     }
-    
     
     // Initialize
     fetchUserData();

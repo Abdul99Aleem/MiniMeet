@@ -6,6 +6,9 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
+// Import shared state
+const { activeRooms, roomUsers } = require('./shared');
+
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
@@ -15,9 +18,6 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   }
 });
-
-// Track active rooms
-const activeRooms = new Set();
 
 // Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/minimeet', {
@@ -94,6 +94,7 @@ app.get('/', (req, res) => {
         // User is authenticated
         if (roomId) {
             // If room ID is provided, serve the video call page
+            // We'll let the client-side handle room validation
             return res.sendFile(path.join(__dirname, 'views/videocall.html'));
         }
         
@@ -105,14 +106,12 @@ app.get('/', (req, res) => {
     }
 });
 
-// API endpoint to check if a room is active
-app.get('/api/active-rooms', (req, res) => {
-    res.json({ activeRooms: Array.from(activeRooms) });
-});
-
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
+    
+    // Track which rooms this socket has joined
+    const joinedRooms = new Set();
     
     socket.on('join-room', async ({ roomId, username }) => {
         socket.join(roomId);
@@ -120,6 +119,16 @@ io.on('connection', (socket) => {
         
         // Add room to active rooms
         activeRooms.add(roomId);
+        console.log(`Room ${roomId} is now active. Active rooms: ${Array.from(activeRooms)}`);
+        
+        // Track this user in the room
+        if (!roomUsers.has(roomId)) {
+            roomUsers.set(roomId, new Map());
+        }
+        roomUsers.get(roomId).set(socket.id, username);
+        
+        // Add to socket's joined rooms
+        joinedRooms.add(roomId);
         
         // Store username in socket for future reference
         socket.username = username;
@@ -193,46 +202,49 @@ io.on('connection', (socket) => {
     });
     
     socket.on('leave-room', ({ roomId, username }) => {
+        handleUserLeaving(socket, roomId, username);
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        
+        // Handle each room this socket was in
+        for (const roomId of joinedRooms) {
+            const username = socket.username || 'Unknown User';
+            handleUserLeaving(socket, roomId, username);
+        }
+    });
+    
+    // Helper function to handle a user leaving a room
+    function handleUserLeaving(socket, roomId, username) {
+        // Remove user from room
         socket.leave(roomId);
+        
+        // Remove from tracking
+        if (roomUsers.has(roomId)) {
+            roomUsers.get(roomId).delete(socket.id);
+            
+            // If room is now empty, remove it
+            if (roomUsers.get(roomId).size === 0) {
+                roomUsers.delete(roomId);
+                activeRooms.delete(roomId);
+                console.log(`Room ${roomId} is now empty and has been removed. Active rooms: ${Array.from(activeRooms)}`);
+            }
+        }
+        
+        // Remove from socket's joined rooms
+        joinedRooms.delete(roomId);
+        
+        // Notify other users in the room
         socket.to(roomId).emit('user-left', { peerId: socket.id, username });
         
         // Check if this was the last user in the room
         const room = io.sockets.adapter.rooms.get(roomId);
         if (!room || room.size === 0) {
             activeRooms.delete(roomId);
-            console.log(`Room ${roomId} is now inactive`);
+            console.log(`Room ${roomId} is now inactive. Active rooms: ${Array.from(activeRooms)}`);
         }
-    });
-    
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-        
-        // Find all rooms this socket was in
-        const rooms = [];
-        for (const [roomId, clients] of io.sockets.adapter.rooms.entries()) {
-            if (typeof roomId === 'string' && roomId !== socket.id) {
-                const room = io.sockets.adapter.rooms.get(roomId);
-                if (room && !room.has(socket.id)) {
-                    rooms.push(roomId);
-                }
-            }
-        }
-        
-        // Notify other users in each room
-        for (const roomId of rooms) {
-            socket.to(roomId).emit('user-left', {
-                peerId: socket.id,
-                username: socket.username || 'Unknown User'
-            });
-            
-            // Check if this was the last user in the room
-            const room = io.sockets.adapter.rooms.get(roomId);
-            if (!room || room.size === 0) {
-                activeRooms.delete(roomId);
-                console.log(`Room ${roomId} is now inactive`);
-            }
-        }
-    });
+    }
 });
 
 // Create initial users if they don't exist
@@ -271,6 +283,3 @@ server.listen(PORT, () => {
         mongoose.connection.once('open', createInitialUsers);
     }
 });
-
-// Export the activeRooms set
-module.exports = { activeRooms };

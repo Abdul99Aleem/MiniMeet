@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
-const { activeRooms } = require('../server');
+// Import shared state
+const { activeRooms } = require('../shared');
 
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {
@@ -11,9 +12,7 @@ const isAuthenticated = (req, res, next) => {
     res.status(401).json({ message: 'Unauthorized' });
 };
 
-
-
-// Get messages for a room
+// Get current user
 router.get('/user', (req, res) => {
     if (!req.session.user) {
         return res.status(401).json({ message: 'Not authenticated' });
@@ -27,15 +26,16 @@ router.get('/check-room', async (req, res) => {
     const { roomId } = req.query;
     
     if (!roomId) {
-        return res.status(400).json({ message: 'Room ID is required' });
+        return res.status(400).json({ exists: false, message: 'Room ID is required' });
     }
     
     try {
-        // Check if there are any messages in this room
-        const messages = await Message.find({ roomId }).limit(1);
+        // Check if room is in active rooms list
+        const exists = activeRooms.has(roomId);
         
-        // A room exists if it's in the active rooms list or if there are messages for it
-        const exists = activeRooms.has(roomId) || messages.length > 0;
+        // Debug log to see what's happening
+        console.log(`Checking if room ${roomId} exists: ${exists}`);
+        console.log(`Active rooms: ${Array.from(activeRooms)}`);
         
         res.json({ exists });
     } catch (error) {
@@ -43,6 +43,5 @@ router.get('/check-room', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
-
 
 module.exports = router;
